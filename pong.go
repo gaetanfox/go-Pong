@@ -8,6 +8,15 @@ import (
 
 const winWidth, winHeight int = 800, 600
 
+type gameState int
+
+const (
+	start gameState = iota
+	play
+)
+
+var state = start
+
 // Font stuff
 var nums = [][]byte{
 	{1, 1, 1,
@@ -100,19 +109,23 @@ func (ball *ball) update(leftPaddle *paddle, rightPaddle *paddle, elapsedTime fl
 	if ball.x < 0 {
 		rightPaddle.score++
 		ball.pos = getCenter()
+		state = start
 	} else if int(ball.x) > winWidth {
 		leftPaddle.score++
 		ball.pos = getCenter()
+		state = start
 	}
 
-	if int(ball.x) < int(leftPaddle.x+leftPaddle.w/2) {
-		if int(ball.y) > int(leftPaddle.y-leftPaddle.h/2) && int(ball.y) < int(leftPaddle.y+leftPaddle.h/2) {
+	if ball.x-ball.radius < leftPaddle.x+leftPaddle.w/2 {
+		if ball.y > leftPaddle.y-leftPaddle.h/2 && ball.y < leftPaddle.y+leftPaddle.h/2 {
 			ball.xv = -ball.xv
+			ball.x = leftPaddle.x + leftPaddle.w/2 + ball.radius
 		}
 	}
-	if int(ball.x) > int(rightPaddle.x-rightPaddle.w/2) {
-		if int(ball.y) > int(rightPaddle.y-rightPaddle.h/2) && int(ball.y) < int(rightPaddle.y+rightPaddle.h/2) {
+	if ball.x+ball.radius > rightPaddle.x-rightPaddle.w/2 {
+		if ball.y > rightPaddle.y-rightPaddle.h/2 && ball.y < rightPaddle.y+rightPaddle.h/2 {
 			ball.xv = -ball.xv
+			ball.x = rightPaddle.x - rightPaddle.w/2 - ball.radius
 		}
 	}
 }
@@ -232,12 +245,21 @@ func main() {
 			}
 		}
 		//game
-		clear(pixels)
-		drawNumber(getCenter(), color{255, 255, 255}, 20, 2, pixels)
-		player1.update(keyState, elapsedTime)
-		player2.aiUpdate(&ball, elapsedTime)
-		ball.update(&player1, &player2, elapsedTime)
+		if state == play {
+			player1.update(keyState, elapsedTime)
+			player2.aiUpdate(&ball, elapsedTime)
+			ball.update(&player1, &player2, elapsedTime)
+		} else if state == start {
+			if keyState[sdl.SCANCODE_SPACE] != 0 {
+				if player1.score == 3 || player2.score == 3 {
+					player1.score = 0
+					player2.score = 0
+				}
+				state = play
+			}
+		}
 
+		clear(pixels)
 		player1.draw(pixels)
 		player2.draw(pixels)
 		ball.draw(pixels)
